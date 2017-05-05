@@ -244,17 +244,17 @@ def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, verbo
         '-i %s' % fin,
         '-o %s' % fout,
         '--slope %s' % slope,
-        '--cellSize %s' % cellsize
+        '--cell_size %s' % cellsize
     ]
     if maxWindowSize is not None:
-	cmd.append('--maxWindowSize %s' %maxWindowSize)
+        cmd.append('--max_window_size %s' %maxWindowSize)
     if maxDistance is not None:
-	cmd.append('--maxDistance %s' %maxDistance)
+        cmd.append('--max_distance %s' %maxDistance)
 
     cmd.append('--classify')
-    
+
     if verbose:
-        cmd.append('-v1')
+        cmd.append('--developer-debug')
         print ' '.join(cmd)
     print ' '.join(cmd)
     out = os.system(' '.join(cmd))
