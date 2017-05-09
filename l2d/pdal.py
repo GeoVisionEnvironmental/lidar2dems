@@ -226,8 +226,7 @@ def run_pipeline(xml, verbose=False):
     cmd = [
         'pdal',
         'pipeline',
-        '-i %s' % xmlfile,
-        '-v4',
+        '-i %s' % xmlfile
     ]
     if verbose:
         out = os.system(' '.join(cmd))
@@ -383,6 +382,8 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
         elif demtype == 'dtm':
             _xml = _xml_add_classification_filter(_xml, 2)
         _xml_add_readers(_xml, filenames)
+        print 'pipeline xml'
+        _xml_print(xml)
         run_pipeline(xml, verbose=verbose)
         # verify existence of fout
         exists = True
