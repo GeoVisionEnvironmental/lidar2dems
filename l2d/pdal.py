@@ -50,16 +50,29 @@ def _xml_base():
     return xml
 
 
-def _xml_p2g_base(fout, output, radius, site=None):
+def _xml_p2g_base(fout, output, radius, resolution=1, site=None):
     """ Create initial XML for PDAL pipeline containing a Writer element """
     xml = _xml_base()
     etree.SubElement(xml, "Writer", type="writers.gdal")
+    etree.SubElement(xml[0], "Option", name="resolution").text = str(resolution)
     etree.SubElement(xml[0], "Option", name="radius").text = str(radius)
-    etree.SubElement(xml[0], "Option", name="output_format").text = "tif"
     # add EPSG option? - 'EPSG:%s' % epsg
     etree.SubElement(xml[0], "Option", name="filename").text = fout
     for t in output:
         etree.SubElement(xml[0], "Option", name="output_type").text = t
+    return xml
+
+
+def _xml_gdal_base(fout, output, radius, resolution=1, site=None):
+    """ Create initial XML for PDAL pipeline containing a Writer element """
+    xml = _xml_base()
+    for t in output:
+        writer = etree.SubElement(xml, "Writer", type="writers.gdal")
+        etree.SubElement(writer, "Option", name="resolution").text = str(resolution)
+        etree.SubElement(writer, "Option", name="radius").text = str(radius)
+        # add EPSG option? - 'EPSG:%s' % epsg
+        etree.SubElement(writer, "Option", name="filename").text = '{0}.{1}.tif'.format(fout, t)
+        etree.SubElement(writer, "Option", name="output_type").text = t
     return xml
 
 
@@ -99,10 +112,8 @@ def _xml_add_decimation_filter(xml, step):
 def _xml_add_classification_filter(xml, classification, equality="equals"):
     """ Add classification Filter element and return """
     fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="dimension")
-    _xml.text = "Classification"
-    _xml = etree.SubElement(_xml, "Options")
-    etree.SubElement(_xml, "Option", name=equality).text = str(classification)
+    _xml = etree.SubElement(fxml, "Option", name="limits")
+    _xml.text = "Classification[{0}:{0}]".format(classification)
     return fxml
 
 
@@ -364,16 +375,19 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
     if run or overwrite:
         print 'Creating %s from %s files' % (prettyname, len(filenames))
         # xml pipeline
-        xml = _xml_p2g_base(bname, products, radius, site)
+        xml = _xml_gdal_base(bname, products, radius, site=site)
         _xml = xml[0]
         if decimation is not None:
             _xml = _xml_add_decimation_filter(_xml, decimation)
-        _xml = _xml_add_filters(_xml, maxsd, maxz, maxangle, returnnum)
-        if demtype == 'dsm':
-            _xml = _xml_add_classification_filter(_xml, 1, equality='max')
-        elif demtype == 'dtm':
-            _xml = _xml_add_classification_filter(_xml, 2)
-        _xml_add_readers(_xml, filenames)
+        # add filters to all writers
+        for xmlWriter in xml:
+            _xml = _xml_add_filters(xmlWriter, maxsd, maxz, maxangle, returnnum)
+            if demtype == 'dsm':
+                _xml = _xml_add_classification_filter(_xml, 1, equality='max')
+            elif demtype == 'dtm':
+                _xml = _xml_add_classification_filter(_xml, 2)
+            _xml_add_readers(_xml, filenames)
+
         print 'pipeline xml'
         _xml_print(xml)
         run_pipeline(xml, verbose=verbose)
