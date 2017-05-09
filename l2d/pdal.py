@@ -53,18 +53,10 @@ def _xml_base():
 def _xml_p2g_base(fout, output, radius, site=None):
     """ Create initial XML for PDAL pipeline containing a Writer element """
     xml = _xml_base()
-    etree.SubElement(xml, "Writer", type="writers.p2g")
-    etree.SubElement(xml[0], "Option", name="grid_dist_x").text = "1.0"
-    etree.SubElement(xml[0], "Option", name="grid_dist_y").text = "1.0"
+    etree.SubElement(xml, "Writer", type="writers.gdal")
     etree.SubElement(xml[0], "Option", name="radius").text = str(radius)
     etree.SubElement(xml[0], "Option", name="output_format").text = "tif"
     # add EPSG option? - 'EPSG:%s' % epsg
-    if site is not None:
-        etree.SubElement(xml[0], "Option", name="spatialreference").text = site.Projection()
-        # this not yet working in p2g
-        # bounds = get_vector_bounds(site)
-        # bounds = '([%s, %s], [%s, %s])' % (bounds[0], bounds[2], bounds[1], bounds[3])
-        # etree.SubElement(xml[0], "Option", name="bounds").text = bounds
     etree.SubElement(xml[0], "Option", name="filename").text = fout
     for t in output:
         etree.SubElement(xml[0], "Option", name="output_type").text = t
