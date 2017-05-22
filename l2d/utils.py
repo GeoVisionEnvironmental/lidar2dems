@@ -56,7 +56,7 @@ def dem_products(demtype):
     products = {
         'density': ['den'],
         'dsm': ['den', 'max'],
-        'dtm': ['den', 'min', 'max', 'idw']
+        'dtm': ['idw']
     }
     return products[demtype]
 
