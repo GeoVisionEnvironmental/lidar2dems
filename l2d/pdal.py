@@ -71,22 +71,13 @@ def _xml_las_base(fout):
     return xml
 
 
-def _xml_add_pclblock(xml, pclblock):
-    """ Add pclblock Filter element by taking in filename of a JSON file """
-    _xml = etree.SubElement(xml, "Filter", type="filters.pclblock")
-    etree.SubElement(_xml, "Option", name="filename").text = pclblock
-    return _xml
-
-
 def _xml_add_pmf(xml, slope, cellsize):
     """ Add progressive morphological filter """
     # create JSON file for performing outlier removal
-    j1 = '{"pipeline": {"name": "PMF","version": 1.0,"filters":'
-    json = j1 + '[{"name": "ProgressiveMorphologicalFilter","setSlope": %s,"setellSize": %s}]}}' % (slope, cellsize)
-    f, fname = tempfile.mkstemp(suffix='.json')
-    os.write(f, json)
-    os.close(f)
-    return _xml_add_pclblock(xml, fname)
+    fxml = etree.SubElement(xml, "Filter", type="filters.pmf")
+    _xml = etree.SubElement(fxml, "Option", name="slope").text = str(slope)
+    _xml = etree.SubElement(fxml, "Option", name="cell_size").text = str(cellsize)
+    return fxml
 
 
 def _xml_add_decimation_filter(xml, step):
@@ -106,13 +97,11 @@ def _xml_add_classification_filter(xml, classification, equality="equals"):
 
 def _xml_add_maxsd_filter(xml, meank=20, thresh=3.0):
     """ Add outlier Filter element and return """
-    # create JSON file for performing outlier removal
-    j1 = '{"pipeline": {"name": "Outlier Removal","version": 1.0,"filters":'
-    json = j1 + '[{"name": "StatisticalOutlierRemoval","setMeanK": %s,"setStddevMulThresh": %s}]}}' % (meank, thresh)
-    f, fname = tempfile.mkstemp(suffix='.json')
-    os.write(f, json)
-    os.close(f)
-    return _xml_add_pclblock(xml, fname)
+    fxml = etree.SubElement(xml, "Filter", type="filters.outlier")
+    _xml = etree.SubElement(fxml, "Option", name="method").text = "statistical"
+    _xml = etree.SubElement(fxml, "Option", name="mean_k").text = str(meank)
+    _xml = etree.SubElement(fxml, "Option", name="multiplier").text = str(thresh)
+    return fxml
 
 
 def _xml_add_maxz_filter(xml, maxz):
