@@ -214,7 +214,7 @@ def run_pipeline(xml, verbose=False):
     os.remove(xmlfile)
 
 
-def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, verbose=False):
+def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=False, verbose=False):
     """ Run PDAL ground """
     cmd = [
         'pdal',
@@ -228,6 +228,9 @@ def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, verbo
         cmd.append('--max_window_size %s' %maxWindowSize)
     if maxDistance is not None:
         cmd.append('--max_distance %s' %maxDistance)
+
+    if approximate:
+        cmd.append('--approximate')
 
     if verbose:
         cmd.append('--developer-debug')
@@ -264,7 +267,7 @@ def merge_files(filenames, fout=None, site=None, buff=20, decimation=None, verbo
 
 
 def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDistance=1,
-             site=None, buff=20, decimation=None, verbose=False):
+             site=None, buff=20, decimation=None, approximate=False, verbose=False):
     """ Classify files and output single las file """
     start = datetime.now()
 
@@ -274,7 +277,7 @@ def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDi
     ftmp = merge_files(filenames, site=site, buff=buff, decimation=decimation, verbose=verbose)
 
     try:
-        run_pdalground(ftmp, fout, slope, cellsize, maxWindowSize, maxDistance, verbose=verbose)
+        run_pdalground(ftmp, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=approximate, verbose=verbose)
         # verify existence of fout
         if not os.path.exists(fout):
             raise Exception("Error creating classified file %s" % fout)

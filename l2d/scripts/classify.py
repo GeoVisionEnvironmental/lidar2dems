@@ -58,6 +58,7 @@ def main():
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Overwrite any existing output files')
+    parser.add_argument('--approximate', help='Use approximate algorithm (much faster) when classifying ground points', default=False, action='store_true')
     parser.add_argument('-v', '--verbose', help='Print additional info', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -85,7 +86,7 @@ def main():
                 filenames = find_lasfiles(args.lasdir, site=feature, checkoverlap=True)
                 fout = classify(filenames, fout, slope=slope, cellsize=cellsize,
                                 site=feature, buff=args.buff,
-                                decimation=args.decimation,  verbose=args.verbose)
+                                decimation=args.decimation, approximate=args.approximate, verbose=args.verbose)
             except Exception as e:
                 print "Error creating %s: %s" % (os.path.relpath(fout), e)
                 if args.verbose:
