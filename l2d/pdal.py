@@ -229,8 +229,6 @@ def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, verbo
     if maxDistance is not None:
         cmd.append('--max_distance %s' %maxDistance)
 
-    cmd.append('--classify')
-
     if verbose:
         cmd.append('--developer-debug')
         print ' '.join(cmd)
