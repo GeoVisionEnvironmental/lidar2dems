@@ -52,20 +52,27 @@ def _json_base():
 def _json_gdal_base(fout, output, radius, resolution=1, site=None):
     """ Create initial JSON for PDAL pipeline containing a Writer element """
     json = _json_base()
-    for t in output:
-        if site is not None:
-            json['pipeline'].insert(0, {
-                    'type': 'filters.reprojection',
-                    'spatialreference': site.Projection()
-                })
-
+    
+    if site is not None:
         json['pipeline'].insert(0, {
-            'type': 'writers.gdal',
-            'resolution': resolution,
-            'radius': radius,
-            'filename': '{0}.{1}.tif'.format(fout, t),
-            'output_type': t
-        })
+                'type': 'filters.reprojection',
+                'spatialreference': site.Projection()
+            })
+
+    if len(output) > 1:
+        # TODO: we might want to create a multiband raster with max/min/idw
+        # in the future
+        print "More than 1 output, will only create {0}".format(output[0])
+        output = [output[0]]
+
+    json['pipeline'].insert(0, {
+        'type': 'writers.gdal',
+        'resolution': resolution,
+        'radius': radius,
+        'filename': '{0}.{1}.tif'.format(fout, output[0]),
+        'output_type': output[0]
+    })
+
     return json
 
 
@@ -361,6 +368,7 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
     if run or overwrite:
         print 'Creating %s from %s files' % (prettyname, len(filenames))
         # JSON pipeline
+        # TODO: make resolution a dynamic parameter
         json = _json_gdal_base(bname, products, radius, 0.1, site=site)
 
         if decimation is not None:
