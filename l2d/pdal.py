@@ -54,12 +54,12 @@ def _json_gdal_base(fout, output, radius, resolution=1, site=None):
     json = _json_base()
     for t in output:
         if site is not None:
-            json['pipeline'].append({
+            json['pipeline'].insert(0, {
                     'type': 'filters.reprojection',
                     'spatialreference': site.Projection()
                 })
 
-        json['pipeline'].append({
+        json['pipeline'].insert(0, {
             'type': 'writers.gdal',
             'resolution': resolution,
             'radius': radius,
@@ -72,7 +72,7 @@ def _json_gdal_base(fout, output, radius, resolution=1, site=None):
 def _json_las_base(fout):
     """ Create initial JSON for writing to a LAS file """
     json = _json_base()
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
         'type': 'writers.las',
         'filename': fout  
     })
@@ -81,7 +81,7 @@ def _json_las_base(fout):
 
 def _json_add_decimation_filter(json, step):
     """ Add decimation Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.decimation',
             'step': step
         })
@@ -94,7 +94,7 @@ def _json_add_classification_filter(json, classification, equality="equals"):
     if equality == 'max':
         limits = 'Classification[:{0}]'.format(classification)
 
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.range',
             'limits': limits
         })
@@ -103,7 +103,7 @@ def _json_add_classification_filter(json, classification, equality="equals"):
 
 def _json_add_maxsd_filter(json, meank=20, thresh=3.0):
     """ Add outlier Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.outlier',
             'method': 'statistical',
             'mean_k': meank,
@@ -114,7 +114,7 @@ def _json_add_maxsd_filter(json, meank=20, thresh=3.0):
 
 def _json_add_maxz_filter(json, maxz):
     """ Add max elevation Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.range',
             'limits': 'Z[:{0}]'.format(maxz)
         })
@@ -124,7 +124,7 @@ def _json_add_maxz_filter(json, maxz):
 
 def _json_add_maxangle_filter(json, maxabsangle):
     """ Add scan angle Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.range',
             'limits': 'ScanAngleRank[{0}:{1}]'.format(str(-float(maxabsangle)), maxabsangle)
         })
@@ -133,7 +133,7 @@ def _json_add_maxangle_filter(json, maxabsangle):
 
 def _json_add_scanedge_filter(json, value):
     """ Add EdgeOfFlightLine Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.range',
             'limits': 'EdgeOfFlightLine[{0}:{0}]'.format(value)
         })
@@ -142,7 +142,7 @@ def _json_add_scanedge_filter(json, value):
 
 def _json_add_returnnum_filter(json, value):
     """ Add ReturnNum Filter element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.range',
             'limits': 'ReturnNum[{0}:{0}]'.format(value)
         })
@@ -163,7 +163,7 @@ def _json_add_filters(json, maxsd=None, maxz=None, maxangle=None, returnnum=None
 
 def _json_add_crop_filter(json, wkt):
     """ Add cropping polygon as Filter Element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'filters.crop',
             'polygon': wkt
         })
@@ -172,7 +172,7 @@ def _json_add_crop_filter(json, wkt):
 
 def _json_add_reader(json, filename):
     """ Add LAS Reader Element and return """
-    json['pipeline'].append({
+    json['pipeline'].insert(0, {
             'type': 'readers.las',
             'filename': os.path.abspath(filename)
         })
@@ -185,7 +185,7 @@ def _json_add_readers(json, filenames):
         _json_add_reader(json, f)
 
     if len(filenames) > 1:
-        json['pipeline'].append({
+        json['pipeline'].insert(0, {
                 'type': 'filters.merge'
             })
 
