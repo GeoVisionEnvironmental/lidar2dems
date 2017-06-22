@@ -369,7 +369,7 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
         json = _json_add_filters(json, maxsd, maxz, maxangle, returnnum)
         
         if demtype == 'dsm':
-            json = _json_add_classification_filter(json, 1, equality='max')
+            json = _json_add_classification_filter(json, 2, equality='max')
         elif demtype == 'dtm':
             json = _json_add_classification_filter(json, 2)
 
