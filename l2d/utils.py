@@ -54,9 +54,9 @@ def get_classification_filename(site, outdir='', slope=None, cellsize=None, suff
 def dem_products(demtype):
     """ Return products for this dem type """
     products = {
-        'density': ['den'],
+        'density': ['count'],
         'dsm': ['max'],
-        'dtm': ['idw']
+        'dtm': ['min', 'max', 'idw']
     }
     return products[demtype]
 
@@ -65,7 +65,7 @@ def splitexts(filename):
     """ Split off two extensions """
     bname, ext = os.path.splitext(filename)
     parts = os.path.splitext(bname)
-    if len(parts) == 2 and parts[1] in ['.den', '.min', '.max', '.mean', '.idw']:
+    if len(parts) == 2 and parts[1] in ['.den', '.min', '.max', '.mean', '.idw', '.count']:
         bname = parts[0]
         ext = parts[1] + ext
     return bname, ext
@@ -74,23 +74,23 @@ def splitexts(filename):
 def class_params(feature, slope=None, cellsize=None):
     """ Get classification parameters based on land classification """
     if slope is not None and cellsize is not None:
-	return (slope, cellsize)
-    else:
-	try:
-	    # TODO - read in from config file ?
-	    params = {
-		'1': (1, 3),    # non-forest, flat
-		'2': (1, 2),    # forest, flat
-		'3': (5, 2),    # non-forest, complex
-		'4': (10, 2),   # forest, complex
-	    }
-	    return params[feature['class']]
-	except:
-	    if slope is None:
-		slope = '1'
-	    if cellsize is None:
-		cellsize = '3'
         return (slope, cellsize)
+    else:
+        try:
+            # TODO - read in from config file ?
+            params = {
+                '1': (1, 3),    # non-forest, flat
+                '2': (1, 2),    # forest, flat
+                '3': (5, 2),    # non-forest, complex
+                '4': (10, 2),   # forest, complex
+            }
+            return params[feature['class']]
+        except:
+            if slope is None:
+                slope = '1'
+            if cellsize is None:
+                cellsize = '3'
+            return (slope, cellsize)
 
 
 def class_suffix(slope, cellsize, suffix=''):

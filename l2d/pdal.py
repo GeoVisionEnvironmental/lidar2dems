@@ -30,8 +30,7 @@
 
 # Library functions for creating DEMs from Lidar data
 
-import os
-from lxml import etree
+import os, json
 import tempfile
 
 from shapely.wkt import loads
@@ -41,177 +40,186 @@ import uuid
 from .utils import class_params, class_suffix, dem_products, gap_fill
 
 
-""" XML Functions """
+""" JSON Functions """
 
 
-def _xml_base():
-    """ Create initial XML for PDAL pipeline """
-    xml = etree.Element("Pipeline", version="1.0")
-    return xml
+def _json_base():
+    """ Create initial JSON for PDAL pipeline """
+    return {'pipeline': []}
 
 
-def _xml_gdal_base(fout, output, radius, resolution=1, site=None):
-    """ Create initial XML for PDAL pipeline containing a Writer element """
-    xml = _xml_base()
+def _json_gdal_base(fout, output, radius, resolution=1, site=None):
+    """ Create initial JSON for PDAL pipeline containing a Writer element """
+    json = _json_base()
     for t in output:
-        writer = etree.SubElement(xml, "Writer", type="writers.gdal")
-        etree.SubElement(writer, "Option", name="resolution").text = str(resolution)
-        etree.SubElement(writer, "Option", name="radius").text = str(radius)
-        # add EPSG option? - 'EPSG:%s' % epsg
-        etree.SubElement(writer, "Option", name="filename").text = '{0}.{1}.tif'.format(fout, t)
-        etree.SubElement(writer, "Option", name="output_type").text = t
-    return xml
+        if site is not None:
+            json['pipeline'].append({
+                    'type': 'filters.reprojection',
+                    'spatialreference': site.Projection()
+                })
+
+        json['pipeline'].append({
+            'type': 'writers.gdal',
+            'resolution': resolution,
+            'radius': radius,
+            'filename': '{0}.{1}.tif'.format(fout, t),
+            'output_type': t
+        })
+    return json
 
 
-def _xml_las_base(fout):
-    """ Create initial XML for writing to a LAS file """
-    xml = _xml_base()
-    etree.SubElement(xml, "Writer", type="writers.las")
-    etree.SubElement(xml[0], "Option", name="filename").text = fout
-    return xml
+def _json_las_base(fout):
+    """ Create initial JSON for writing to a LAS file """
+    json = _json_base()
+    json['pipeline'].append({
+        'type': 'writers.las',
+        'filename': fout  
+    })
+    return json
 
 
-def _xml_add_pmf(xml, slope, cellsize):
-    """ Add progressive morphological filter """
-    # create JSON file for performing outlier removal
-    fxml = etree.SubElement(xml, "Filter", type="filters.pmf")
-    _xml = etree.SubElement(fxml, "Option", name="slope").text = str(slope)
-    _xml = etree.SubElement(fxml, "Option", name="cell_size").text = str(cellsize)
-    return fxml
-
-
-def _xml_add_decimation_filter(xml, step):
+def _json_add_decimation_filter(json, step):
     """ Add decimation Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.decimation")
-    etree.SubElement(fxml, "Option", name="step").text = str(step)
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.decimation',
+            'step': step
+        })
+    return json
 
 
-def _xml_add_classification_filter(xml, classification, equality="equals"):
+def _json_add_classification_filter(json, classification, equality="equals"):
     """ Add classification Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="limits")
-    _xml.text = "Classification[{0}:{0}]".format(classification)
-    return fxml
+    limits = 'Classification[{0}:{0}]'.format(classification)
+    if equality == 'max':
+        limits = 'Classification[:{0}]'.format(classification)
+
+    json['pipeline'].append({
+            'type': 'filters.range',
+            'limits': limits
+        })
+    return json
 
 
-def _xml_add_maxsd_filter(xml, meank=20, thresh=3.0):
+def _json_add_maxsd_filter(json, meank=20, thresh=3.0):
     """ Add outlier Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.outlier")
-    _xml = etree.SubElement(fxml, "Option", name="method").text = "statistical"
-    _xml = etree.SubElement(fxml, "Option", name="mean_k").text = str(meank)
-    _xml = etree.SubElement(fxml, "Option", name="multiplier").text = str(thresh)
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.outlier',
+            'method': 'statistical',
+            'mean_k': meank,
+            'multiplier': thresh
+        })
+    return json
 
 
-def _xml_add_maxz_filter(xml, maxz):
+def _json_add_maxz_filter(json, maxz):
     """ Add max elevation Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="dimension")
-    _xml.text = "Z"
-    _xml = etree.SubElement(_xml, "Options")
-    etree.SubElement(_xml, "Option", name="max").text = maxz
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.range',
+            'limits': 'Z[:{0}]'.format(maxz)
+        })
+
+    return json
 
 
-def _xml_add_maxangle_filter(xml, maxabsangle):
+def _json_add_maxangle_filter(json, maxabsangle):
     """ Add scan angle Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="dimension")
-    _xml.text = "ScanAngleRank"
-    _xml = etree.SubElement(_xml, "Options")
-    etree.SubElement(_xml, "Option", name="max").text = maxabsangle
-    etree.SubElement(_xml, "Option", name="min").text = str(-float(maxabsangle))
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.range',
+            'limits': 'ScanAngleRank[{0}:{1}]'.format(str(-float(maxabsangle)), maxabsangle)
+        })
+    return json
 
 
-def _xml_add_scanedge_filter(xml, value):
+def _json_add_scanedge_filter(json, value):
     """ Add EdgeOfFlightLine Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="dimension")
-    _xml.text = "EdgeOfFlightLine"
-    _xml = etree.SubElement(_xml, "Options")
-    etree.SubElement(_xml, "Option", name="equals").text = value
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.range',
+            'limits': 'EdgeOfFlightLine[{0}:{0}]'.format(value)
+        })
+    return json
 
 
-def _xml_add_returnnum_filter(xml, value):
+def _json_add_returnnum_filter(json, value):
     """ Add ReturnNum Filter element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.range")
-    _xml = etree.SubElement(fxml, "Option", name="dimension")
-    _xml.text = "ReturnNum"
-    _xml = etree.SubElement(_xml, "Options")
-    etree.SubElement(_xml, "Option", name="equals").text = value
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.range',
+            'limits': 'ReturnNum[{0}:{0}]'.format(value)
+        })
+    return json
 
 
-def _xml_add_filters(xml, maxsd=None, maxz=None, maxangle=None, returnnum=None):
+def _json_add_filters(json, maxsd=None, maxz=None, maxangle=None, returnnum=None):
     if maxsd is not None:
-        xml = _xml_add_maxsd_filter(xml, thresh=maxsd)
+        json = _json_add_maxsd_filter(json, thresh=maxsd)
     if maxz is not None:
-        xml = _xml_add_maxz_filter(xml, maxz)
+        json = _json_add_maxz_filter(json, maxz)
     if maxangle is not None:
-        xml = _xml_add_maxangle_filter(xml, maxangle)
+        json = _json_add_maxangle_filter(json, maxangle)
     if returnnum is not None:
-        xml = _xml_add_returnnum_filter(xml, returnnum)
-    return xml
+        json = _json_add_returnnum_filter(json, returnnum)
+    return json
 
 
-def _xml_add_crop_filter(xml, wkt):
+def _json_add_crop_filter(json, wkt):
     """ Add cropping polygon as Filter Element and return """
-    fxml = etree.SubElement(xml, "Filter", type="filters.crop")
-    etree.SubElement(fxml, "Option", name="polygon").text = wkt
-    return fxml
+    json['pipeline'].append({
+            'type': 'filters.crop',
+            'polygon': wkt
+        })
+    return json
 
 
-def _xml_add_reader(xml, filename):
+def _json_add_reader(json, filename):
     """ Add LAS Reader Element and return """
-    _xml = etree.SubElement(xml, "Reader", type="readers.las")
-    etree.SubElement(_xml, "Option", name="filename").text = os.path.abspath(filename)
-    return _xml
+    json['pipeline'].append({
+            'type': 'readers.las',
+            'filename': os.path.abspath(filename)
+        })
+    return json
 
 
-def _xml_add_readers(xml, filenames):
+def _json_add_readers(json, filenames):
     """ Add merge Filter element and readers to a Writer element and return Filter element """
-    if len(filenames) > 1:
-        fxml = etree.SubElement(xml, "Filter", type="filters.merge")
-    else:
-        fxml = xml
     for f in filenames:
-        _xml_add_reader(fxml, f)
-    return fxml
+        _json_add_reader(json, f)
+
+    if len(filenames) > 1:
+        json['pipeline'].append({
+                'type': 'filters.merge'
+            })
+
+    return json
 
 
-def _xml_print(xml):
-    """ Pretty print xml """
-    print etree.tostring(xml, pretty_print=True)
+def _json_print(json):
+    """ Pretty print JSON """
+    print json.dumps(json, indent=4, separators=(',', ': '))
 
 
 """ Run PDAL commands """
 
-
-def run_pipeline(xml, verbose=False):
-    """ Run PDAL Pipeline with provided XML """
+def run_pipeline(json, verbose=False):
+    """ Run PDAL Pipeline with provided JSON """
     if verbose:
-        _xml_print(xml)
+        _json_print(json)
 
     # write to temp file
-    f, xmlfile = tempfile.mkstemp(suffix='.xml')
+    f, jsonfile = tempfile.mkstemp(suffix='.json')
     if verbose:
-        print 'Pipeline file: %s' % xmlfile
-    os.write(f, etree.tostring(xml))
+        print 'Pipeline file: %s' % jsonfile
+    os.write(f, json.dumps(json))
     os.close(f)
 
     cmd = [
         'pdal',
         'pipeline',
-        '-i %s' % xmlfile
+        '-i %s' % jsonfile
     ]
     if verbose:
         out = os.system(' '.join(cmd))
     else:
         out = os.system(' '.join(cmd) + ' > /dev/null 2>&1')
-    os.remove(xmlfile)
+    os.remove(jsonfile)
 
 
 def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=False, verbose=False):
@@ -249,17 +257,17 @@ def merge_files(filenames, fout=None, site=None, buff=20, decimation=None, verbo
     if fout is None:
         # TODO ? use temp folder?
         fout = os.path.join(os.path.abspath(os.path.dirname(filenames[0])), str(uuid.uuid4()) + '.las')
-    xml = _xml_las_base(fout)
-    _xml = xml[0]
+    json = _json_las_base(fout)
+
     if decimation is not None:
-        _xml = _xml_add_decimation_filter(_xml, decimation)
+        json = _json_add_decimation_filter(json, decimation)
     # need to build PDAL with GEOS
     if site is not None:
         wkt = loads(site.WKT()).buffer(buff).wkt
-        _xml = _xml_add_crop_filter(_xml, wkt)
-    _xml_add_readers(_xml, filenames)
+        json = _json_add_crop_filter(json, wkt)
+    _json_add_readers(json, filenames)
     try:
-        run_pipeline(xml, verbose=verbose)
+        run_pipeline(json, verbose=verbose)
     except:
         raise Exception("Error merging LAS files")
     print 'Created merged file %s in %s' % (os.path.relpath(fout), datetime.now() - start)
@@ -273,7 +281,7 @@ def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDi
 
     print 'Classifying %s files into %s' % (len(filenames), os.path.relpath(fout))
 
-    # problem using PMF in XML - instead merge to ftmp and run 'pdal ground'
+    # problem using PMF in JSON - instead merge to ftmp and run 'pdal ground'
     ftmp = merge_files(filenames, site=site, buff=buff, decimation=decimation, verbose=verbose)
 
     try:
@@ -351,19 +359,22 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
 
     if run or overwrite:
         print 'Creating %s from %s files' % (prettyname, len(filenames))
-        # xml pipeline
-        xml = _xml_gdal_base(bname, products, radius, 0.1, site=site)
-        _xml = xml[0]
-        if decimation is not None:
-            _xml = _xml_add_decimation_filter(_xml, decimation)
-        # add filters to all writers
-        for xmlWriter in xml:
-            _xml = _xml_add_filters(xmlWriter, maxsd, maxz, maxangle, returnnum)
-            if demtype == 'dtm':
-                _xml = _xml_add_classification_filter(_xml, 2)
-            _xml_add_readers(_xml, filenames)
+        # JSON pipeline
+        json = _json_gdal_base(bname, products, radius, 0.1, site=site)
 
-        run_pipeline(xml, verbose=verbose)
+        if decimation is not None:
+            json = _json_add_decimation_filter(json, decimation)
+
+        json = _json_add_filters(json, maxsd, maxz, maxangle, returnnum)
+        
+        if demtype == 'dsm':
+            json = _json_add_classification_filter(json, 1, equality='max')
+        elif demtype == 'dtm':
+            json = _json_add_classification_filter(json, 2)
+
+        _json_add_readers(json, filenames)
+
+        run_pipeline(json, verbose=verbose)
         # verify existence of fout
         exists = True
         for f in fouts.values():
