@@ -30,7 +30,8 @@
 
 # Library functions for creating DEMs from Lidar data
 
-import os, json
+import os
+import json as jsonlib
 import tempfile
 
 from shapely.wkt import loads
@@ -193,7 +194,7 @@ def _json_add_readers(json, filenames):
 
 def _json_print(json):
     """ Pretty print JSON """
-    print json.dumps(json, indent=4, separators=(',', ': '))
+    print jsonlib.dumps(json, indent=4, separators=(',', ': '))
 
 
 """ Run PDAL commands """
@@ -207,7 +208,7 @@ def run_pipeline(json, verbose=False):
     f, jsonfile = tempfile.mkstemp(suffix='.json')
     if verbose:
         print 'Pipeline file: %s' % jsonfile
-    os.write(f, json.dumps(json))
+    os.write(f, jsonlib.dumps(json))
     os.close(f)
 
     cmd = [
