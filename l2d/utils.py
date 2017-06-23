@@ -170,7 +170,6 @@ def gap_fill(filenames, fout, site=None, interpolation='nearest'):
         raise Exception('No filenames provided!')
 
     filenames = sorted(filenames)
-    print(filenames)
     imgs = gippy.GeoImages(filenames)
     nodata = imgs[0][0].NoDataValue()
     arr = imgs[0][0].Read()

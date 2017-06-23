@@ -88,6 +88,7 @@ class l2dParser(argparse.ArgumentParser):
         group = parser.add_argument_group('output options')
         group.add_argument('--outdir', help='Output directory', default='./')
         group.add_argument('--suffix', help='Suffix to append to output', default='')
+        group.add_argument('--resolution', help='Output resolution in length of raster cell edges in X/Y units', default=0.1)
         group.add_argument(
             '-g', '--gapfill', default=False, action='store_true',
             help='Gapfill using multiple radii products and interpolation (no effect on density products)')

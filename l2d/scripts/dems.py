@@ -79,7 +79,7 @@ def main():
 
     # pull out the arguments to pass to create_dems
     keys = ['radius', 'decimation', 'maxsd', 'maxz', 'maxangle', 'returnnum',
-            'outdir', 'suffix', 'verbose', 'overwrite']
+            'outdir', 'suffix', 'verbose', 'overwrite', 'resolution']
     vargs = vars(args)
     kwargs = {k: vargs[k] for k in vargs if k in keys}
 

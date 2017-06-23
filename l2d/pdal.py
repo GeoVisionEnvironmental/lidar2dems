@@ -308,13 +308,13 @@ def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDi
 
 
 def create_dems(filenames, demtype, radius=['0.56'], site=None, gapfill=False,
-                outdir='', suffix='', overwrite=False, **kwargs):
+                outdir='', suffix='', overwrite=False, resolution=0.1, **kwargs):
     """ Create DEMS for multiple radii, and optionally gapfill """
     fouts = []
     for rad in radius:
         fouts.append(
             create_dem(filenames, demtype,
-                       radius=rad, site=site, outdir=outdir, suffix=suffix, overwrite=overwrite, **kwargs))
+                       radius=rad, site=site, outdir=outdir, suffix=suffix, overwrite=overwrite, resolution=resolution, **kwargs))
     fnames = {}
     # convert from list of dicts, to dict of lists
     for product in fouts[0].keys():
@@ -345,7 +345,7 @@ def create_dems(filenames, demtype, radius=['0.56'], site=None, gapfill=False,
 
 def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
                maxsd=None, maxz=None, maxangle=None, returnnum=None,
-               products=None, outdir='', suffix='', overwrite=False, verbose=False):
+               products=None, outdir='', suffix='', overwrite=False, verbose=False, resolution=0.1):
     """ Create DEM from collection of LAS files """
     start = datetime.now()
     # filename based on demtype, radius, and optional suffix
@@ -368,8 +368,7 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
     if run or overwrite:
         print 'Creating %s from %s files' % (prettyname, len(filenames))
         # JSON pipeline
-        # TODO: make resolution a dynamic parameter
-        json = _json_gdal_base(bname, products, radius, 0.1, site=site)
+        json = _json_gdal_base(bname, products, radius, resolution, site=site)
 
         if decimation is not None:
             json = _json_add_decimation_filter(json, decimation)
