@@ -261,12 +261,14 @@ def merge_files(filenames, fout=None, site=None, buff=20, decimation=None, verbo
         fout = os.path.join(os.path.abspath(os.path.dirname(filenames[0])), str(uuid.uuid4()) + '.las')
     json = _json_las_base(fout)
 
-    if decimation is not None:
-        json = _json_add_decimation_filter(json, decimation)
-    # need to build PDAL with GEOS
     if site is not None:
         wkt = loads(site.WKT()).buffer(buff).wkt
         json = _json_add_crop_filter(json, wkt)
+    
+    if decimation is not None:
+        json = _json_add_decimation_filter(json, decimation)
+    
+    # need to build PDAL with GEOS
     _json_add_readers(json, filenames)
     try:
         run_pipeline(json, verbose=verbose)
@@ -364,8 +366,6 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
         # JSON pipeline
         json = _json_gdal_base(bname, products, radius, resolution)
 
-        if decimation is not None:
-            json = _json_add_decimation_filter(json, decimation)
 
         json = _json_add_filters(json, maxsd, maxz, maxangle, returnnum)
         
@@ -373,6 +373,9 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
             json = _json_add_classification_filter(json, 2, equality='max')
         elif demtype == 'dtm':
             json = _json_add_classification_filter(json, 2)
+
+        if decimation is not None:
+            json = _json_add_decimation_filter(json, decimation)
 
         _json_add_readers(json, filenames)
 
