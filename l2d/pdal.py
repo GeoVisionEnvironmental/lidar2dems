@@ -52,12 +52,6 @@ def _json_base():
 def _json_gdal_base(fout, output, radius, resolution=1, site=None):
     """ Create initial JSON for PDAL pipeline containing a Writer element """
     json = _json_base()
-    
-    if site is not None:
-        json['pipeline'].insert(0, {
-                'type': 'filters.reprojection',
-                'spatialreference': site.Projection()
-            })
 
     if len(output) > 1:
         # TODO: we might want to create a multiband raster with max/min/idw
@@ -368,7 +362,7 @@ def create_dem(filenames, demtype, radius='0.56', site=None, decimation=None,
     if run or overwrite:
         print 'Creating %s from %s files' % (prettyname, len(filenames))
         # JSON pipeline
-        json = _json_gdal_base(bname, products, radius, resolution, site=site)
+        json = _json_gdal_base(bname, products, radius, resolution)
 
         if decimation is not None:
             json = _json_add_decimation_filter(json, decimation)
