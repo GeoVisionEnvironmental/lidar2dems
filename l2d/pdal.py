@@ -224,7 +224,7 @@ def run_pipeline(json, verbose=False):
     os.remove(jsonfile)
 
 
-def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=False, verbose=False):
+def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=False, initialDistance=0.7, verbose=False):
     """ Run PDAL ground """
     cmd = [
         'pdal',
@@ -232,7 +232,8 @@ def run_pdalground(fin, fout, slope, cellsize, maxWindowSize, maxDistance, appro
         '-i %s' % fin,
         '-o %s' % fout,
         '--slope %s' % slope,
-        '--cell_size %s' % cellsize
+        '--cell_size %s' % cellsize,
+        '--initial_distance %s' % initialDistance
     ]
     if maxWindowSize is not None:
         cmd.append('--max_window_size %s' %maxWindowSize)
@@ -279,7 +280,7 @@ def merge_files(filenames, fout=None, site=None, buff=20, decimation=None, verbo
 
 
 def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDistance=1,
-             site=None, buff=20, decimation=None, approximate=False, verbose=False):
+             site=None, buff=20, decimation=None, approximate=False, initialDistance=0.7, verbose=False):
     """ Classify files and output single las file """
     start = datetime.now()
 
@@ -289,7 +290,7 @@ def classify(filenames, fout, slope=None, cellsize=None, maxWindowSize=10, maxDi
     ftmp = merge_files(filenames, site=site, buff=buff, decimation=decimation, verbose=verbose)
 
     try:
-        run_pdalground(ftmp, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=approximate, verbose=verbose)
+        run_pdalground(ftmp, fout, slope, cellsize, maxWindowSize, maxDistance, approximate=approximate, initialDistance=initialDistance, verbose=verbose)
         # verify existence of fout
         if not os.path.exists(fout):
             raise Exception("Error creating classified file %s" % fout)

@@ -50,8 +50,8 @@ def main():
     parser.add_argument('-b', '--buff', help=h, default=20)
     parser.add_argument('--slope', help='Slope (override)', default=None)
     parser.add_argument('--cellsize', help='Cell Size (override)', default=None)
-    parser.add_argument('--maxWindowSize', help='Max Window Size (override)', default=None)
-    parser.add_argument('--maxDistance', help='Max Distance (override)', default=None)
+    parser.add_argument('--maxWindowSize', help='Max Window Size (override)', default=10)
+    parser.add_argument('--maxDistance', help='Max Distance (override)', default=1)
     parser.add_argument('--outdir', help='Output directory location', default='./')
     h = 'Decimate the points (steps between points, 1 is no pruning'
     parser.add_argument('--decimation', help=h, default=None)
@@ -59,6 +59,7 @@ def main():
         '-o', '--overwrite', default=False, action='store_true',
         help='Overwrite any existing output files')
     parser.add_argument('--approximate', help='Use approximate algorithm (much faster) when classifying ground points', default=False, action='store_true')
+    parser.add_argument('--initialDistance', help='Set this value to the expected uncertainty of ground noise (in meters). Too small of a value will exclude valid ground points, while too large of a value will misclassify non-ground points for ground.', default=0.5)
     parser.add_argument('-v', '--verbose', help='Print additional info', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -85,8 +86,9 @@ def main():
             try:
                 filenames = find_lasfiles(args.lasdir, site=feature, checkoverlap=True)
                 fout = classify(filenames, fout, slope=slope, cellsize=cellsize,
+                                maxWindowSize=args.maxWindowSize, maxDistance=args.maxDistance,
                                 site=feature, buff=args.buff,
-                                decimation=args.decimation, approximate=args.approximate, verbose=args.verbose)
+                                decimation=args.decimation, approximate=args.approximate, initialDistance=args.initialDistance, verbose=args.verbose)
             except Exception as e:
                 print "Error creating %s: %s" % (os.path.relpath(fout), e)
                 if args.verbose:
