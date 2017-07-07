@@ -50,8 +50,8 @@ def main():
     parser.add_argument('-b', '--buff', help=h, default=20)
     parser.add_argument('--slope', help='Slope (override)', default=None)
     parser.add_argument('--cellsize', help='Cell Size (override)', default=None)
-    parser.add_argument('--maxWindowSize', help='Max Window Size (override)', default=10)
-    parser.add_argument('--maxDistance', help='Max Distance (override)', default=1)
+    parser.add_argument('--maxWindowSize', help='Max Window Size (override)', default=33)
+    parser.add_argument('--maxDistance', help='Max Distance (override)', default=2.5)
     parser.add_argument('--outdir', help='Output directory location', default='./')
     h = 'Decimate the points (steps between points, 1 is no pruning'
     parser.add_argument('--decimation', help=h, default=None)
